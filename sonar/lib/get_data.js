@@ -4,7 +4,7 @@ const directions = require('./directions')
 const datasets = require('./datasets')
 const error = require('./error')
 
-module.exports = function getData(dataset, address, env) {
+module.exports = function getData(dataset, address) {
       return geolocation.geometry(address).then(function(location) {
       var config = datasets(dataset);
         var url = config.url;
@@ -15,14 +15,14 @@ module.exports = function getData(dataset, address, env) {
                return layer.features[0].attributes[key];
          });
 
-         if(dataset == "bus stops") {
+         /*if(dataset == "bus stops") {
              return directions(location, layer.features[0].geometry, env).then(function(steps) {
                  response += "\nHow to get there: " + steps;
                 return response;
              })
-         } else {
-             return response;
-         }
+         } else {*/
+         return response;
+         //}
 
        })
       })

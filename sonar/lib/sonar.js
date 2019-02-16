@@ -147,20 +147,15 @@ const api = botBuilder(function (request, originalRequest) { // Claudia JS main 
 
         if (possibleStates.includes(state)) {
 
-                if (state in DATASETS) {
-                    dataset = DATASETS[state];
-                    originalRequest.body.entry[0].messaging[0].message.text = request.text;
-                }
-
                 var loc = request.text + " " + city; // the location should be the new response
-                var inputs = parseIntent(dataset, state, loc, request, originalRequest); // send the new statement that we constructed to the sonar parsing algorithm
 
-                switch(inputs.intent) { // That request will send us an intent for this switch statement
 
-                    case 'AddNote':
+                switch(DATASETS[state]) { // That request will send us an intent for this switch statement
+
+/*                     case 'AddNote':
                         retext = notes(inputs.slots.Dataset, inputs.slots.Location, originalRequest.env);
                         break;
-
+ */
                     case 'Email':
                         retext = "Great, your message has been sent";
                         break;
@@ -179,29 +174,16 @@ const api = botBuilder(function (request, originalRequest) { // Claudia JS main 
                             }
                         };
                         break;
-
-                    case 'GetCrime':
-                        retext = getCrime(inputs.slots.Location);
-                        break;
-
                     case 'GetData': // We will almost always end up at this case.
-                        retext = getData(inputs.slots.Dataset, inputs.slots.Location, originalRequest.env); // the getData function will grab the dataset that we want in the location we requested
+                        retext = getData(state, loc); // the getData function will grab the dataset that we want in the location we requested
                         break;
 
-                    case 'GetMap':
+                   /*  case 'GetMap':
                         retext = getMap(inputs.slots.Location);
                         break;
 
                     case 'GetPopulation':
                         retext = getPopulation(inputs.slots.Location, originalRequest.env);
-                        break;
-
-                    case 'Hal':
-                        retext = hal.sorry();
-                        break;
-
-                    case 'Hello':
-                        retext = help("hello");
                         break;
 
                     case 'Help':
@@ -222,7 +204,7 @@ const api = botBuilder(function (request, originalRequest) { // Claudia JS main 
 
                     case 'SummarizeData':
                         retext = "Summarize not yet implemented."
-                        break;
+                        break; */
 
                     default:
                         retext = Promise.resolve("Sorry, there was an error in Sonar.");
