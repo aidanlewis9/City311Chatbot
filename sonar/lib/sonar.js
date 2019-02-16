@@ -16,7 +16,6 @@ const notes = require('./notes')
 const hal = require('./hal')
 const help = require('./help')
 const Q = require('q');
-const nodemailer = require('nodemailer');
 var AWS = require('aws-sdk');
 var fs = require('fs');
 var readline = require('readline');
@@ -48,7 +47,7 @@ function restoreCtx(sender)//Function will be used later to restore database inf
   console.log("Trying to restore context for sender", sender);
 
   var params = {
-    TableName: '311-bot-db',
+    TableName: 'ServiceProjectsBot',
     Key: {
       'UserID': sender
     }
@@ -62,7 +61,7 @@ function persistCtx(sender, state) // This is used later to repopulate the datab
   console.log("Persisting context for sender", sender);
 
   var params = {
-      TableName: '311-bot-db',
+      TableName: 'ServiceProjectsBot',
       Item:{
           'UserID': sender,
           'State': state // this is used for persistence. The bot interacts differently with users depending on whether their state is start or fire/trash/map
@@ -75,7 +74,7 @@ function persistCtx(sender, state) // This is used later to repopulate the datab
 function uploadInstance(timeInMs, senderTime, reqCommand, reqLocation, platform) //Very similar to the persist function, but used to log each user interaction
 {
   var params = {
-      TableName: '311-bot-log',
+      TableName: 'ServiceProjectsBotLog',
       Item:{
           'UserID+Timestamp': senderTime,
           'Time': timeInMs,
@@ -98,7 +97,7 @@ const api = botBuilder(function (request, originalRequest) { // Claudia JS main 
 
     var city = "South Bend, IN";
     var possibleStates = ["fire", "map", "trash", "other", "311", "about"];
-
+    var textInputs = ["1", "2", "3", "4", "5", "6"]
     var sender = request.type + '.' + request.sender; // Platform of the sender + the unique sender id
     var retext;
     return restoreCtx(sender).then(function(existingCtx){ // Restore information based on that sender id to grab their state
@@ -108,7 +107,7 @@ const api = botBuilder(function (request, originalRequest) { // Claudia JS main 
             state = existingCtx.Item.State;
         }
 
-        if (possibleStates.includes(request.text)) { // If they have already seen the welcome message, their request will be one of these
+        if (textInputs.includes(request.text)) { // If they have already seen the welcome message, their request will be one of these
 
             state = STATES_MAPPING[request.text]; // Grab their request and make it the users state
             var text;
@@ -131,7 +130,7 @@ const api = botBuilder(function (request, originalRequest) { // Claudia JS main 
         var dataset = "error";
 
         if (possibleStates.includes(state)) {
-
+                console.log("Made it inside the dataset switch area");
                 var loc = request.text + " " + city; // the location should be the new response
 
 
@@ -160,6 +159,7 @@ const api = botBuilder(function (request, originalRequest) { // Claudia JS main 
                         };
                         break;
                     case 'GetData': // We will almost always end up at this case.
+                        console.log("Made it to GetData case");
                         retext = getData(state, loc); // the getData function will grab the dataset that we want in the location we requested
                         break;
 

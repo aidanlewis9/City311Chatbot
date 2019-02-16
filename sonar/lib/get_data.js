@@ -6,6 +6,7 @@ const error = require('./error')
 
 module.exports = function getData(dataset, address) {
       return geolocation.geometry(address).then(function(location) {
+      console.log("Made it inside the getData function");
       var config = datasets(dataset);
         var url = config.url;
         var geometry = location.x + "," + location.y;
