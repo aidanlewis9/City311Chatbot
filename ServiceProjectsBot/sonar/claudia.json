@@ -1,0 +1,11 @@
+{
+  "lambda": {
+    "role": "311-Lambda-Role",
+    "name": "sonar",
+    "region": "us-east-1"
+  },
+  "api": {
+    "id": "vmzfo42rl6",
+    "module": "index"
+  }
+}
