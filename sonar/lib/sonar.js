@@ -5,12 +5,10 @@
 // To reconfigure, look at the claudijs deployment instructions online. Run "npm run install" in the powershell at the root directory of the project.
 // Add flags occordingly for facebook/twillio/alexa/groupme/slack etc...
 const botBuilder = require('claudia-bot-builder')
-const fbTemplate = botBuilder.fbTemplate;
 const parseIntent = require('./parse_intent')
 const getData = require('./get_data')
 const getPopulation = require('./get_population')
 const getCrime = require('./get_crime')
-//const email311 = require('./email')
 const getMap = require('./get_map')
 const layerMap = require('./layer_map')
 const ping = require('./ping')
@@ -22,18 +20,9 @@ const nodemailer = require('nodemailer');
 var AWS = require('aws-sdk');
 var fs = require('fs');
 var readline = require('readline');
-var google = require('googleapis');
-var googleAuth = require('google-auth-library');
 
 const dynamodb = new AWS.DynamoDB.DocumentClient();
 AWS.config.setPromisesDependency(Q.Promise);
-
-var SCOPES = [
-    'https://mail.google.com/',
-    'https://www.googleapis.com/auth/gmail.modify',
-    'https://www.googleapis.com/auth/gmail.compose',
-    'https://www.googleapis.com/auth/gmail.send'
-];
 
 var DATASETS = {
     "fire": "GetData",
@@ -44,9 +33,15 @@ var DATASETS = {
     "311": "Email"
 }
 
-var TOKEN_DIR = (process.env.HOME || process.env.HOMEPATH ||
-    process.env.USERPROFILE) + '/.credentials/';
-var TOKEN_PATH = TOKEN_DIR + 'gmail-nodejs-quickstart.json';
+var STATES_MAPPING = {
+    "1": "trash",
+    "2": "fire",
+    "3": "map",
+    "4": "311",
+    "5": "other",
+    "6": "about"
+}
+
 
 function restoreCtx(sender)//Function will be used later to restore database information for the user that accesses the bot.
 {
@@ -115,32 +110,22 @@ const api = botBuilder(function (request, originalRequest) { // Claudia JS main 
 
         if (possibleStates.includes(request.text)) { // If they have already seen the welcome message, their request will be one of these
 
-            state = request.text; // Grab their request and make it the users state
+            state = STATES_MAPPING[request.text]; // Grab their request and make it the users state
+            var text;
 
             if(state == 'other') { // If they chose the 'other' section, you are now talking about knowledge articles instead of data like fire/trash
-                return persistCtx(sender, state).then(function(result){ // You want to add that they are no longer in the welcome state, but have rather been asked for more information
-                    const Q2 = new fbTemplate.Text('Okay. What would you like me to search for?'); // see ClaudiaJS fbTemplate. Just a nice way of using FB messenger features
-                    return Q2
-                        .get();
-                });
+                text = "Okay. What would you like me to search for?";
             }
-            if(state == '311') { // If they chose the 'other' section, you are now talking about knowledge articles instead of data like fire/trash
-                  return persistCtx(sender, state).then(function(result){ // You want to add that they are no longer in the welcome state, but have rather been asked for more information
-                      const Q2 = new fbTemplate.Text('What would you like to e-mail 311? Please include your e-mail or phone number in the message'); // see ClaudiaJS fbTemplate. Just a nice way of using FB messenger features
-                      return Q2
-                          .get();
-                  });
+            else if(state == '311') { // If they chose the 'other' section, you are now talking about knowledge articles instead of data like fire/trash
+                text = "What would you like to e-mail 311? Please include your e-mail or phone number in the message";
             }
-
             else if (state != "about") {
-                return persistCtx(sender, state).then(function(result){ // You want to restore that their state is now fire/trash/map and they are being asked about their location
-                    const Q2 = new fbTemplate.Text('Great, at what location?');
-                    return Q2
-                        //.addQuickReplyLocation()
-                        .get();
-
-                });
+                text = "Great, at what location?";
             }
+
+            return persistCtx(sender, state).then(function(result){ // You want to restore that their state is now fire/trash/map and they are being asked about their location
+                return text;
+            });
         }
 
         var dataset = "error";
@@ -224,18 +209,16 @@ const api = botBuilder(function (request, originalRequest) { // Claudia JS main 
             //if(state != "start"){
                 state = "start"; // set them to the start state
                 return persistCtx(sender, state).then(function(result){ // upload their new state
-                // Everything below is simply a nice way of sending quick replies to facebook and allowing the user to quickly choose an option to interact with
-                const Q1 = new fbTemplate.Text('Hello! Welcome to South Bend\'s 311-Bot. What can I help you with today?' );
-                return Q1
-                    .addQuickReply('Trash Pickup Day', 'trash') // If they click the one that says "Trash Pickup Day" it actually returns "trash" for the new request.text
-                    .addQuickReply('Fire Hydrant', 'fire')
-                    .addQuickReply('Map Display', 'map')
-                    .addQuickReply('E-mail 311', '311')
-                    .addQuickReply('Other Information', 'other') // This is commented out currently because Michael hasn't finished the knowledge articles (classic)
-                    .addQuickReply('About 311bot', 'about')
-                    .get();
+                  // Everything below is simply a nice way of sending quick replies to facebook and allowing the user to quickly choose an option to interact with
+                  return "Hello! Welcome to South Bend\'s 311-Bot. Type the number of the option you wish to select.\n" +
+                              "(1) Trash Pickup Day\n" +
+                              "(2) Fire Hydrant\n" +
+                              "(3) Map Display\n" +
+                              "(4) E-mail 311\n" +
+                              "(5) Other Information\n" +
+                              "(6) About 311bot";
                 });
         }
-});}, { platforms: ['alexa', 'slackSlashCommand', 'facebook'] });
+});}, { platforms: ['twilio'] });
 
 module.exports = api;
