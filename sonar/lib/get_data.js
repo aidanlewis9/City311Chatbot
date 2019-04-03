@@ -7,12 +7,11 @@ const error = require('./error')
 module.exports = function getData(dataset, address) {
       return geolocation.geometry(address).then(function(location) {
       console.log("Made it inside the getData function");
-      var config = datasets(dataset);
-        var url = config.url;
+        var url = dataset["url"];
         var geometry = location.x + "," + location.y;
-        return geoservice().query(url, geometry, config.distance).then(function(layer) {
+        return geoservice().query(url, geometry, dataset["distance"].distance).then(function(layer) {
 
-         var response = config.template.replace(/\{(\w*)\}/g, function(m,key) {
+         var response = dataset["template"].replace(/\{(\w*)\}/g, function(m,key) {
                return layer.features[0].attributes[key];
          });
 

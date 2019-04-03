@@ -20,27 +20,17 @@ var AWS = require('aws-sdk');
 var fs = require('fs');
 var readline = require('readline');
 
+var config_info = require('./datasets');
+config_info = config_info.config;
 const dynamodb = new AWS.DynamoDB.DocumentClient();
 AWS.config.setPromisesDependency(Q.Promise);
 
 var DATASETS = {
-    "fire": "GetData",
-    "trash": "GetData",
     "map": "GetMap",
     "about": "Help",
     "other": "Search",
     "311": "Email"
 }
-
-var STATES_MAPPING = {
-    "1": "trash",
-    "2": "fire",
-    "3": "map",
-    "4": "311",
-    "5": "other",
-    "6": "about"
-}
-
 
 function restoreCtx(sender)//Function will be used later to restore database information for the user that accesses the bot.
 {
@@ -97,104 +87,40 @@ const api = botBuilder(function (request, originalRequest) { // Claudia JS main 
 
     var city = "South Bend, IN";
     var possibleStates = ["fire", "map", "trash", "other", "311", "about"];
-    var textInputs = ["1", "2", "3", "4", "5", "6"]
     var sender = request.type + '.' + request.sender; // Platform of the sender + the unique sender id
     var retext;
     return restoreCtx(sender).then(function(existingCtx){ // Restore information based on that sender id to grab their state
-            console.log("At the function");
+        console.log("At the function");
         var state;
         if(existingCtx.Item){ // If that person did exist, then reinstate their state. If not just leave the state blank.
             state = existingCtx.Item.State;
         }
+        config_concat = config_info["datasets"].concat(config_info["other options"]);
+        var numchoice = parseInt(request.text);
+        if (numchoice >= 1 && numchoice <= config_concat.length) { // If they have already seen the welcome message, their request will be one of these
 
-        if (textInputs.includes(request.text)) { // If they have already seen the welcome message, their request will be one of these
-
-            state = STATES_MAPPING[request.text]; // Grab their request and make it the users state
-            var text;
-
-            if(state == 'other') { // If they chose the 'other' section, you are now talking about knowledge articles instead of data like fire/trash
-                text = "Okay. What would you like me to search for?";
-            }
-            else if(state == '311') { // If they chose the 'other' section, you are now talking about knowledge articles instead of data like fire/trash
-                text = "What would you like to e-mail 311? Please include your e-mail or phone number in the message";
-            }
-            else if (state != "about") {
-                text = "Great, at what location?";
-            }
-
+            state = config_concat[numchoice - 1]["display name"]; // Grab their request and make it the users state
+            var text = config_concat[numchoice-1]["question"];
             return persistCtx(sender, state).then(function(result){ // You want to restore that their state is now fire/trash/map and they are being asked about their location
                 return text;
             });
         }
-
+        possibleStates = []
+        for (i in config_concat){
+            possibleStates.push(config_concat[i]["display name"])
+        }
         var dataset = "error";
-
         if (possibleStates.includes(state)) {
                 console.log("Made it inside the dataset switch area");
                 var loc = request.text + " " + city; // the location should be the new response
-
-
-                switch(DATASETS[state]) { // That request will send us an intent for this switch statement
-
-/*                     case 'AddNote':
-                        retext = notes(inputs.slots.Dataset, inputs.slots.Location, originalRequest.env);
-                        break;
- */
-                    case 'Email':
-                        retext = "Great, your message has been sent";
-                        break;
-
-                    case 'ExitApp':
-                        // return a JavaScript object to set advanced response params
-                        // this prevents any packaging from bot builder and is just
-                        // returned to Alexa as you specify
-                        retext = {
-                            response: {
-                                outputSpeech: {
-                                    type: 'PlainText',
-                                    text: 'Bye from Sonar!'
-                                },
-                                shouldEndSession: true
-                            }
-                        };
-                        break;
-                    case 'GetData': // We will almost always end up at this case.
-                        console.log("Made it to GetData case");
-                        retext = getData(state, loc); // the getData function will grab the dataset that we want in the location we requested
-                        break;
-
-                   /*  case 'GetMap':
-                        retext = getMap(inputs.slots.Location);
-                        break;
-
-                    case 'GetPopulation':
-                        retext = getPopulation(inputs.slots.Location, originalRequest.env);
-                        break;
-
-                    case 'Help':
-                        retext = help(inputs.slots.Dataset);
-                        break;
-
-                    case 'LayerMap':
-                        retext = layerMap(inputs.slots.Dataset, inputs.slots.Location);
-                        break;
-
-                    case 'Ping':
-                        retext = ping(inputs.slots.Dataset);
-                        break;
-
-                    case 'Search':
-                        retext = "This is what I could find on " + request.text + ":\n" + "http://data-southbend.opendata.arcgis.com/datasets?q=" + request.text.replace(/ /g,"+");
-                        break;
-
-                    case 'SummarizeData':
-                        retext = "Summarize not yet implemented."
-                        break; */
-
-                    default:
-                        retext = Promise.resolve("Sorry, there was an error in Sonar.");
-                }
-
+                var index = possibleStates.indexOf(state)
+                
+                if("url" in config_concat[index]){
+                    console.log("Made it to GetData case");
+                    console.log("Config concat");
+                    console.log(config_concat[index]);
+                    retext = getData(config_concat[index], loc); // the getData function will grab the dataset that we want in the location we requested
+                }                
                 state = "start";
                 var timeInMs = Date.now(); // for the log
                 senderTime = sender + '.' + timeInMs; // the log needs a unique key for every single instance, so we append the time to the username
@@ -210,13 +136,14 @@ const api = botBuilder(function (request, originalRequest) { // Claudia JS main 
                 state = "start"; // set them to the start state
                 return persistCtx(sender, state).then(function(result){ // upload their new state
                   // Everything below is simply a nice way of sending quick replies to facebook and allowing the user to quickly choose an option to interact with
-                  return "Hello! Welcome to South Bend\'s 311-Bot. Type the number of the option you wish to select.\n" +
-                              "(1) Trash Pickup Day\n" +
-                              "(2) Fire Hydrant\n" +
-                              "(3) Map Display\n" +
-                              "(4) E-mail 311\n" +
-                              "(5) Other Information\n" +
-                              "(6) About 311bot";
+                  var first_display = "";
+                  for (var i in config_info["datasets"]){
+                        var x = parseInt(i) + 1;
+                        first_display = first_display + "(" + x.toString() + ") " + config_info["datasets"][i]["display name"] + "\n";
+                  }
+                  
+                  return "Hello! Welcome to " + config_info["city info"]["name"] + "\'s 311-Bot. Type the number of the option you wish to select.\n" + first_display;
+                  
                 });
         }
 });}, { platforms: ['twilio'] });
