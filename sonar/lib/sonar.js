@@ -1,5 +1,5 @@
 //311 Bot Main Function.
-//Prathm Juneja. Summer 2017. South Bend Office of Innovation
+//Prathm Juneja. South Bend Office of Innovation
 //Aidan Lewis
 // To update the test version of the bot, type in "npm run update" in powershell at the root directory of the project.
 // To reconfigure, look at the claudijs deployment instructions online. Run "npm run install" in the powershell at the root directory of the project.
@@ -137,7 +137,7 @@ const api = botBuilder(function (request, originalRequest) { // Claudia JS main 
                 return persistCtx(sender, state).then(function(result){ // upload their new state
                   // Everything below is simply a nice way of sending quick replies to facebook and allowing the user to quickly choose an option to interact with
                   var first_display = "";
-                  for (var i in config_info["datasets"]){
+                  for (var i = 0; i < config_info["datasets"].length; i++){
                         var x = parseInt(i) + 1;
                         first_display = first_display + "(" + x.toString() + ") " + config_info["datasets"][i]["display name"] + "\n";
                   }
